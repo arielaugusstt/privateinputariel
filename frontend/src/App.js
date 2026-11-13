@@ -20,9 +20,9 @@ const MASTER_KEY = "amk_master";
 function useMaster() {
   const [master, setMaster] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem(MASTER_KEY)) || { items: [], stands: [] };
+      return JSON.parse(localStorage.getItem(MASTER_KEY)) || { items: [], stands: [], spg_master: [], pivot_rows: [] };
     } catch {
-      return { items: [], stands: [] };
+      return { items: [], stands: [], spg_master: [], pivot_rows: [] };
     }
   });
   const [failed, setFailed] = useState(false);
@@ -44,13 +44,13 @@ function Shell() {
   const [filter, setFilter] = useState("all");
   const [reloadKey, setReloadKey] = useState(0);
   const [spgNames, setSpgNames] = useState([]);
-  const { items: allItems, stands, reload, failed } = useMaster();
+  const { items: allItems, stands, spg_master: spgMaster = [], pivot_rows: pivotRows = [], reload, failed } = useMaster();
   const items = useMemo(() => allItems.filter((i) => i.is_active).sort((a, b) => a.sort_order - b.sort_order), [allItems]);
   const daily = useDaily(date, reloadKey);
 
   useEffect(() => {
     api.get("/spg-names").then((r) => setSpgNames(r.data)).catch(() => {});
-  }, [reloadKey]);
+  }, [reloadKey, spgMaster]);
 
   const inputStands = useMemo(() => stands.filter((s) => s.is_active_input).sort((a, b) => a.input_order - b.input_order), [stands]);
   const isEmpty = (s) => !(Number(daily.entries[s.id]?.omset) > 0);
@@ -83,8 +83,10 @@ function Shell() {
         )}
         {tab === "input" && <InputTab stands={stands} items={items} daily={daily} visible={visible} spgNames={spgNames} />}
         {tab === "wa" && <WaTab date={date} stands={stands} items={items} entries={daily.entries} />}
-        {tab === "pivot" && <PivotTab stands={stands} items={items} />}
-        {tab === "settings" && <SettingsTab stands={stands} items={allItems} reloadMaster={reload} onDataChanged={() => setReloadKey((k) => k + 1)} />}
+        {tab === "pivot" && <PivotTab stands={stands} items={items} spgMaster={spgMaster} pivotRows={pivotRows} />}
+        {tab === "settings" && (
+          <SettingsTab stands={stands} items={allItems} spgMaster={spgMaster} pivotRows={pivotRows} reloadMaster={reload} onDataChanged={() => setReloadKey((k) => k + 1)} />
+        )}
       </main>
       <BottomNav tab={tab} setTab={setTab} />
     </div>

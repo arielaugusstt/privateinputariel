@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Pencil, Trash2, Database, Eraser, LogOut, Loader2 } from "lucide-react";
+import { Plus, Database, Eraser, LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -9,6 +9,8 @@ import { api, errMsg } from "@/lib/api";
 import { slug } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
 import { ItemDialog, StandDialog } from "@/components/MasterDialogs";
+import { Section, Row } from "@/components/SettingsUI";
+import { SpgMasterSection, PivotRowsSection } from "@/components/MasterLists";
 
 const dropCleanDraft = (d) => {
   try {
@@ -18,28 +20,7 @@ const dropCleanDraft = (d) => {
   }
 };
 
-const Section = ({ title, action, children }) => (
-  <section className="bg-white rounded-2xl border border-[#D2D2D7]/80 overflow-hidden">
-    <div className="flex items-center justify-between px-4 py-3 border-b border-[#E5E5EA]">
-      <h2 className="text-sm font-semibold text-[#1D1D1F]">{title}</h2>
-      {action}
-    </div>
-    {children}
-  </section>
-);
-
-const Row = ({ title, meta, onEdit, onDelete, testid }) => (
-  <div data-testid={testid} className="flex items-center gap-3 px-4 py-2.5 border-b border-[#F2F2F7] last:border-0">
-    <div className="min-w-0 flex-1">
-      <p className="text-sm font-medium text-[#1D1D1F] truncate">{title}</p>
-      <p className="text-[11px] text-[#6E6E73] truncate tnum">{meta}</p>
-    </div>
-    <button data-testid={`${testid}-edit`} onClick={onEdit} className="icon-btn" aria-label="Edit"><Pencil className="w-3.5 h-3.5" /></button>
-    <button data-testid={`${testid}-delete`} onClick={onDelete} className="icon-btn" aria-label="Hapus"><Trash2 className="w-3.5 h-3.5" /></button>
-  </div>
-);
-
-export default function SettingsTab({ stands, items, reloadMaster, onDataChanged }) {
+export default function SettingsTab({ stands, items, spgMaster, pivotRows, reloadMaster, onDataChanged }) {
   const { user, logout } = useAuth();
   const [editItem, setEditItem] = useState(null);
   const [editStand, setEditStand] = useState(null);
@@ -83,6 +64,7 @@ export default function SettingsTab({ stands, items, reloadMaster, onDataChanged
   const doConfirm = () => {
     const c = confirm;
     setConfirm(null);
+    if (c.kind === "custom") run(c.fn, `${c.name} dihapus`);
     if (c.kind === "item") run(async () => { await api.delete(`/items/${c.id}`); await reloadMaster(); }, "Item dihapus");
     if (c.kind === "stand") run(async () => { await api.delete(`/stands/${c.id}`); await reloadMaster(); }, "Stand dihapus");
     if (c.kind === "clear") run(async () => {
@@ -139,6 +121,9 @@ export default function SettingsTab({ stands, items, reloadMaster, onDataChanged
         ))}
       </Section>
 
+      <SpgMasterSection spgMaster={spgMaster} run={run} reload={reloadMaster} askDelete={(name, fn) => setConfirm({ kind: "custom", name, fn })} />
+      <PivotRowsSection pivotRows={pivotRows} stands={stands} run={run} reload={reloadMaster} askDelete={(name, fn) => setConfirm({ kind: "custom", name, fn })} />
+
       <Section title="Akun">
         <div className="p-4 flex items-center justify-between gap-3">
           <p data-testid="account-email" className="text-sm text-[#1D1D1F] truncate">{user?.email}</p>
@@ -147,7 +132,7 @@ export default function SettingsTab({ stands, items, reloadMaster, onDataChanged
       </Section>
 
       <ItemDialog item={editItem} onClose={() => setEditItem(null)} onSave={saveItem} />
-      <StandDialog stand={editStand} onClose={() => setEditStand(null)} onSave={saveStand} />
+      <StandDialog stand={editStand} stands={stands} onClose={() => setEditStand(null)} onSave={saveStand} />
       <AlertDialog open={!!confirm} onOpenChange={(o) => !o && setConfirm(null)}>
         <AlertDialogContent data-testid="confirm-dialog" className="rounded-2xl max-w-sm">
           <AlertDialogHeader>

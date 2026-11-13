@@ -54,10 +54,10 @@ export function ItemDialog({ item, onClose, onSave }) {
 
 const EMPTY_STAND = {
   form_name: "", wa_name: "", omset_name: "", percup_name: "", category: "AMK", is_active_input: true,
-  input_order: 0, wa_group: null, wa_order: 0, show_csedang_wa: false, extra_wa_suffix: "",
+  input_order: 0, wa_group: null, wa_order: 0, show_csedang_wa: false, extra_wa_suffix: "", parent_stand_id: null,
 };
 
-export function StandDialog({ stand, onClose, onSave }) {
+export function StandDialog({ stand, stands = [], onClose, onSave }) {
   const [f, setF] = useState(EMPTY_STAND);
   useEffect(() => {
     if (stand) setF({ ...EMPTY_STAND, ...stand, extra_wa_suffix: stand.extra_wa_suffix || "" });
@@ -92,6 +92,14 @@ export function StandDialog({ stand, onClose, onSave }) {
         <Field label="Urutan Form"><input data-testid="stand-input-order-input" type="number" className="field tnum" value={f.input_order} onChange={(e) => set("input_order")(Number(e.target.value))} /></Field>
         {txt("extra_wa_suffix", "Akhiran WA", "stand-suffix-input")}
       </div>
+      {f.category === "AMKOPI" && (
+        <Field label="SPG mengikuti stand utama">
+          <select data-testid="stand-parent-select" className="field" value={f.parent_stand_id || ""} onChange={(e) => set("parent_stand_id")(e.target.value || null)}>
+            <option value="">— Belum diatur —</option>
+            {stands.filter((s) => s.category === "AMK").map((s) => <option key={s.id} value={s.id}>{s.form_name}</option>)}
+          </select>
+        </Field>
+      )}
       <Toggle testid="stand-active-toggle" label="Tampil di Input Harian" checked={f.is_active_input} onChange={set("is_active_input")} />
       <Toggle testid="stand-csedang-toggle" label="Tampilkan Csdng di WA" checked={f.show_csedang_wa} onChange={set("show_csedang_wa")} />
     </FormDialog>

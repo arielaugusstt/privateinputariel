@@ -13,14 +13,17 @@ const readDraft = (d) => {
 const writeDraft = (d, entries, dirty) =>
   localStorage.setItem(key(d), JSON.stringify({ entries, dirty, savedAt: Date.now() }));
 
+export const normName = (s) => String(s || "").replace(/\s+/g, " ").trim().toUpperCase();
+
 const normalize = (entries) =>
   Object.fromEntries(
     Object.entries(entries).map(([id, e]) => [
       id,
       {
         omset: Number(e.omset) || 0,
+        qris: Number(e.qris) || 0,
         cups: Object.fromEntries(Object.entries(e.cups || {}).map(([k, v]) => [k, Number(v) || 0])),
-        spg: [0, 1, 2].map((i) => e.spg?.[i] || ""),
+        spg: [0, 1, 2].map((i) => normName(e.spg?.[i])),
       },
     ])
   );

@@ -129,6 +129,7 @@ class StandIn(BaseModel):
     wa_order: int = 0
     show_csedang_wa: bool = False
     extra_wa_suffix: Optional[str] = None
+    parent_stand_id: Optional[str] = None
 
     @field_validator("wa_group")
     @classmethod
@@ -149,7 +150,87 @@ def stand_doc(body: StandIn) -> dict:
 async def get_master(user: dict = Depends(current_user)):
     items = await db.items.find({}, {"_id": 0}).sort("sort_order", 1).to_list(100)
     stands = await db.stands.find({}, {"_id": 0}).sort("input_order", 1).to_list(500)
-    return {"items": items, "stands": stands}
+    spgs = await db.spg_master.find({}, {"_id": 0}).sort([("sort_order", 1), ("name", 1)]).to_list(1000)
+    rows = await db.pivot_rows.find({}, {"_id": 0}).sort("sort_order", 1).to_list(500)
+    return {"items": items, "stands": stands, "spg_master": spgs, "pivot_rows": rows}
+
+
+def norm_name(s: str) -> str:
+    return " ".join((s or "").split()).upper()
+
+
+class SpgIn(BaseModel):
+    name: str
+    sort_order: int = 0
+    is_active: bool = True
+
+
+class PivotRowIn(BaseModel):
+    label: str
+    stand_id: Optional[str] = None
+    sort_order: int = 0
+
+
+@api.post("/spg-master")
+async def create_spg(body: SpgIn, user: dict = Depends(current_user)):
+    name = norm_name(body.name)
+    if not name:
+        raise HTTPException(422, "Nama SPG wajib diisi")
+    if await db.spg_master.find_one({"name": name}):
+        raise HTTPException(409, "Nama SPG sudah ada")
+    doc = {"id": new_id(), **body.model_dump(), "name": name}
+    await db.spg_master.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@api.put("/spg-master/{sid}")
+async def update_spg(sid: str, body: SpgIn, user: dict = Depends(current_user)):
+    name = norm_name(body.name)
+    if not name:
+        raise HTTPException(422, "Nama SPG wajib diisi")
+    if await db.spg_master.find_one({"name": name, "id": {"$ne": sid}}):
+        raise HTTPException(409, "Nama SPG sudah ada")
+    d = {**body.model_dump(), "name": name}
+    r = await db.spg_master.update_one({"id": sid}, {"$set": d})
+    if not r.matched_count:
+        raise HTTPException(404, "SPG tidak ditemukan")
+    return {"id": sid, **d}
+
+
+@api.delete("/spg-master/{sid}")
+async def delete_spg(sid: str, user: dict = Depends(current_user)):
+    await db.spg_master.delete_one({"id": sid})
+    return {"ok": True}
+
+
+@api.post("/pivot-rows")
+async def create_row(body: PivotRowIn, user: dict = Depends(current_user)):
+    label = body.label.strip()
+    if not label:
+        raise HTTPException(422, "Label baris wajib diisi")
+    doc = {"id": new_id(), **body.model_dump(), "label": label}
+    await db.pivot_rows.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@api.put("/pivot-rows/{rid}")
+async def update_row(rid: str, body: PivotRowIn, user: dict = Depends(current_user)):
+    label = body.label.strip()
+    if not label:
+        raise HTTPException(422, "Label baris wajib diisi")
+    d = {**body.model_dump(), "label": label}
+    r = await db.pivot_rows.update_one({"id": rid}, {"$set": d})
+    if not r.matched_count:
+        raise HTTPException(404, "Baris tidak ditemukan")
+    return {"id": rid, **d}
+
+
+@api.delete("/pivot-rows/{rid}")
+async def delete_row(rid: str, user: dict = Depends(current_user)):
+    await db.pivot_rows.delete_one({"id": rid})
+    return {"ok": True}
 
 
 @api.post("/items")
@@ -200,8 +281,14 @@ async def delete_stand(stand_id: str, user: dict = Depends(current_user)):
 # ---------- Daily input ----------
 class Entry(BaseModel):
     omset: int = Field(0, ge=0)
+    qris: int = Field(0, ge=0)
     cups: Dict[str, Annotated[int, Field(ge=0)]] = {}
     spg: List[str] = []
+
+    @field_validator("spg")
+    @classmethod
+    def norm_spg(cls, v):
+        return ([norm_name(s) for s in v] + ["", "", ""])[:3]
 
 
 class DailyIn(BaseModel):
@@ -237,17 +324,21 @@ async def list_daily(start: str = Query(pattern=DATE_RE), end: str = Query(patte
 
 @api.get("/spg-names")
 async def spg_names(user: dict = Depends(current_user)):
-    docs = await db.daily_inputs.find({}, {"_id": 0, "entries": 1}).sort("date", -1).to_list(120)
-    names = set()
+    master = await db.spg_master.find({"is_active": True}, {"_id": 0}).sort([("sort_order", 1), ("name", 1)]).to_list(1000)
+    out = [m["name"] for m in master]
+    docs = await db.daily_inputs.find({}, {"_id": 0, "entries": 1}).sort("date", -1).to_list(400)
+    hist = set()
     for d in docs:
         for e in d.get("entries", {}).values():
-            names.update(s.strip() for s in e.get("spg", []) if s and s.strip())
-    return sorted(names)
+            hist.update(norm_name(s) for s in e.get("spg", []) if s and s.strip())
+    return out + sorted(hist - set(out))
 
 
 # ---------- Dummy data ----------
-SPG_POOL = ["Rina", "Dewi", "Sari", "Ayu", "Putri", "Lina", "Maya", "Indah", "Nisa", "Wulan",
-            "Fitri", "Rani", "Tari", "Yuni", "Eka"]
+SPG_POOL = ["RINA", "DEWI", "SARI", "AYU", "PUTRI", "LINA", "MAYA", "INDAH", "NISA", "WULAN",
+            "FITRI", "RANI", "TARI", "YUNI", "EKA", "MEGA", "MESHA", "JILDA", "OMAR", "SADILA",
+            "WATU", "NORITA", "DINA", "SINTA", "VIVI", "LALA", "NOVI", "DESI", "TIKA", "RISA",
+            "ANI", "BELLA", "CICI", "DIAN", "ELSA", "FANI", "GITA", "HANA", "IRA", "JENI"]
 
 
 async def generate_dummy(days: int = 7) -> int:
@@ -262,6 +353,7 @@ async def generate_dummy(days: int = 7) -> int:
         if existing and not existing.get("is_dummy"):
             continue
         entries = {}
+        pool = random.sample(SPG_POOL, len(SPG_POOL))
         for s in stands:
             amkopi = s["category"] == "AMKOPI"
             cups = {}
@@ -271,10 +363,13 @@ async def generate_dummy(days: int = 7) -> int:
                 cups[by_code["Cb"]] = 0 if amkopi else random.randint(5, 60)
             if by_code.get("Csdng"):
                 cups[by_code["Csdng"]] = random.randint(3, 30) if s.get("show_csedang_wa") else 0
+            omset = random.randint(150, 2500) * 1000
+            spg = [] if amkopi else [pool.pop() for _ in range(min(random.randint(1, 2), len(pool)))]
             entries[s["id"]] = {
-                "omset": random.randint(150, 2500) * 1000,
+                "omset": omset,
+                "qris": int(omset * random.uniform(0.15, 0.6)) // 1000 * 1000,
                 "cups": cups,
-                "spg": (random.sample(SPG_POOL, random.randint(1, 3)) + ["", ""])[:3],
+                "spg": (spg + ["", "", ""])[:3],
             }
         if existing:
             await db.daily_inputs.update_one(
@@ -338,6 +433,52 @@ STANDS_SEED = [
     ("AMKopi BG-L2", "AMKOPI", 3, 11, "AMKopi BG-L2", {}),
 ]
 
+AMKOPI_PARENT = {
+    "AMKopi R-1": "R-1", "AMKopi R-2": "R-2", "AMKopi R-4": "R-4", "AMKopi TP-1": "TP",
+    "AMKopi TP-2": "AMK PREMIUM", "AMKopi TP-3": "TP-3", "AMKopi GC": "gc", "AMKopi Delta": "delta",
+    "AMKopi BG-LL": "BG-LL", "AMKopi BG-L2": "BG-L2",
+}
+
+# label, linked stand form_name (None = placeholder row)
+PIVOT_ROWS_SEED = [
+    ("R-1", "R-1"), ("R-2", "R-2"), ("R-4", "R-4"), ("R-5", None), ("LIPPO", "Lippo"),
+    ("SUNCITY", "SUNCITY"), ("trans", "TRANS"), ("PA-1", "PA-1"), ("ITC-UG", "ITC-UG"),
+    ("ITC-FC2", "ITC-FC2"), ("BG-L2", "BG-L2"), ("BG-LL", "BG-LL"), ("TP-1", "TP"),
+    ("TP-2", "AMK PREMIUM"), ("TP-3", "TP-3"), ("WTC", "WTC"), ("KAZA", "KAZA"), ("DELTA", "delta"),
+    ("GC", "gc"), ("PTC", "PTC"), ("CITO", None), ("GREEN TEA", None), ("THAI TEA", None),
+] + [(f"(KOSONG {i})", None) for i in range(1, 17)] + [
+    ("AMKopi R-1", "AMKopi R-1"), ("AMKopi R-2", "AMKopi R-2"), ("AMKopi R-4", "AMKopi R-4"),
+    ("AMKopi TP-1", "AMKopi TP-1"), ("AMKopi TP-2", "AMKopi TP-2"), ("AMKopi TP-3", "AMKopi TP-3"),
+    ("AMKopi GC", "AMKopi GC"), ("AMKopi Delta", "AMKopi Delta"), ("AMKopi BG-LL", "AMKopi BG-LL"),
+    ("AMKopi BG-L2", "AMKopi BG-L2"), ("AMKopi PTC", None),
+]
+
+
+async def migrate_v2():
+    if await db.meta.find_one({"key": "v2_qris_spg"}):
+        return
+    stands = await db.stands.find({}, {"_id": 0}).to_list(500)
+    by_form = {s["form_name"]: s for s in stands}
+    for child, parent in AMKOPI_PARENT.items():
+        if child in by_form and parent in by_form and not by_form[child].get("parent_stand_id"):
+            await db.stands.update_one({"id": by_form[child]["id"]},
+                                       {"$set": {"parent_stand_id": by_form[parent]["id"]}})
+    if await db.pivot_rows.count_documents({}) == 0:
+        await db.pivot_rows.insert_many([
+            {"id": new_id(), "label": lbl, "stand_id": by_form[f]["id"] if f in by_form else None, "sort_order": i}
+            for i, (lbl, f) in enumerate(PIVOT_ROWS_SEED, start=1)])
+    amkopi_ids = {s["id"] for s in stands if s["category"] == "AMKOPI"}
+    async for doc in db.daily_inputs.find({"is_dummy": False}):
+        ents = doc.get("entries", {})
+        for sid, e in ents.items():
+            e["spg"] = ["", "", ""] if sid in amkopi_ids else ([norm_name(x) for x in e.get("spg", [])] + ["", "", ""])[:3]
+            e.setdefault("qris", 0)
+        await db.daily_inputs.update_one({"_id": doc["_id"]}, {"$set": {"entries": ents}})
+    await db.daily_inputs.delete_many({"is_dummy": True})
+    if await db.meta.find_one({"key": "dummy_seeded"}):
+        await generate_dummy(7)
+    await db.meta.insert_one({"key": "v2_qris_spg", "at": now_iso()})
+
 
 async def seed():
     admin_email = os.environ["ADMIN_EMAIL"].strip().lower()
@@ -358,6 +499,7 @@ async def seed():
             d.update(extra)
             docs.append(d)
         await db.stands.insert_many(docs)
+    await migrate_v2()
     if not await db.meta.find_one({"key": "dummy_seeded"}):
         await generate_dummy(7)
         await db.meta.insert_one({"key": "dummy_seeded", "at": now_iso()})
