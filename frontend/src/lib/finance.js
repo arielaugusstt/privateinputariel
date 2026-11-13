@@ -1,35 +1,43 @@
 import { ddmm } from "./format";
 
-const sum = (arr) => arr.reduce((a, b) => a + (Number(b) || 0), 0);
 const entriesMap = (docs) => Object.fromEntries(docs.map((d) => [d.date, d.entries || {}]));
 
 export const dayLabel = (dates) => {
   const oneMonth = dates.length > 0 && dates[0].slice(0, 7) === dates[dates.length - 1].slice(0, 7);
-  return (d) => (oneMonth ? `(${Number(d.slice(8))})` : ddmm(d));
+  return (d) => (oneMonth ? String(Number(d.slice(8))) : ddmm(d));
+};
+
+// one month -> fixed columns 1..31 like omset.pdf; otherwise the actual dates
+const financeColumns = (dates) => {
+  const oneMonth = dates.length > 0 && dates[0].slice(0, 7) === dates[dates.length - 1].slice(0, 7);
+  if (!oneMonth) return dates.map((d) => ({ label: ddmm(d), date: d }));
+  const ym = dates[0].slice(0, 7);
+  const inRange = new Set(dates);
+  return Array.from({ length: 31 }, (_, i) => {
+    const d = `${ym}-${String(i + 1).padStart(2, "0")}`;
+    return { label: String(i + 1), date: inRange.has(d) ? d : null };
+  });
 };
 
 const FIELD = {
-  omset: (e) => Number(e?.omset) || 0,
-  qris: (e) => Number(e?.qris) || 0,
-  sisa: (e) => (Number(e?.omset) || 0) - (Number(e?.qris) || 0),
+  omset: (e) => Number(e.omset) || 0,
+  qris: (e) => Number(e.qris) || 0,
+  sisa: (e) => (Number(e.omset) || 0) - (Number(e.qris) || 0),
 };
 
 export function buildFinance(pivotRows, docs, dates, field) {
   const map = entriesMap(docs);
   const get = FIELD[field];
-  const lbl = dayLabel(dates);
-  const header = ["STAND", ...dates.map(lbl), "TOTAL"];
-  const colTotals = dates.map(() => 0);
-  const rows = pivotRows.map((r) => {
-    if (!r.stand_id) return [r.label, ...dates.map(() => ""), ""];
-    const vals = dates.map((d, i) => {
-      const v = get(map[d]?.[r.stand_id]);
-      colTotals[i] += v;
-      return v;
-    });
-    return [r.label, ...vals, sum(vals)];
-  });
-  return { header, rows, totals: [["TOTAL", ...colTotals, sum(colTotals)]] };
+  const cols = financeColumns(dates);
+  const header = ["", ...cols.map((c) => c.label)];
+  const rows = pivotRows.map((r) => [
+    r.label,
+    ...cols.map((c) => {
+      const e = r.stand_id && c.date ? map[c.date]?.[r.stand_id] : null;
+      return e ? get(e) : "";
+    }),
+  ]);
+  return { header, rows, totals: [] };
 }
 
 const effectiveSpg = (stand, dayEntries) => {
@@ -55,7 +63,7 @@ export function buildSal(stands, spgMaster, docs, dates) {
   const master = spgMaster.filter((m) => m.is_active).map((m) => m.name);
   const names = [...master, ...[...found].filter((n) => !master.includes(n)).sort()];
   const header = ["TGL", ...names];
-  const rows = dates.map((d) => [lbl(d), ...names.map((n) => cells[`${d}|${n}`] || "")]);
+  const rows = dates.map((d) => [lbl(d), ...names.map((n) => cells[`${d}|${n}`] || "-")]);
   const shifts = names.map((n) => dates.filter((d) => cells[`${d}|${n}`]).length);
   return { header, rows, totals: [["TOTAL HADIR (SHIFT)", ...shifts]] };
 }

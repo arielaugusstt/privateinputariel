@@ -351,10 +351,10 @@ async def spg_names(user: dict = Depends(current_user)):
 
 
 # ---------- Dummy data ----------
-SPG_POOL = ["RINA", "DEWI", "SARI", "AYU", "PUTRI", "LINA", "MAYA", "INDAH", "NISA", "WULAN",
-            "FITRI", "RANI", "TARI", "YUNI", "EKA", "MEGA", "MESHA", "JILDA", "OMAR", "SADILA",
-            "WATU", "NORITA", "DINA", "SINTA", "VIVI", "LALA", "NOVI", "DESI", "TIKA", "RISA",
-            "ANI", "BELLA", "CICI", "DIAN", "ELSA", "FANI", "GITA", "HANA", "IRA", "JENI"]
+SPG_POOL = ["AINI", "MEGA", "MEGHA", "ZILDA", "DWI", "SHELA", "DINNI", "MAY", "DESI", "DWIE",
+            "IDA", "LINA", "JIHAN", "KARTIKA", "AJENG", "PITRI", "FEBRI", "TINA", "PIPIT", "UMAR",
+            "NADILA", "WAHYU", "APRIL", "FITRI", "ALIF", "NOVI", "ANGEL", "NOFITA", "TRI", "IIN",
+            "NIKMA", "YANI", "REFI", "NANA", "EKA", "ROMLAH", "YUYUN", "PUJI", "SARI"]
 
 
 async def generate_dummy(days: int = 7) -> int:
@@ -455,19 +455,46 @@ AMKOPI_PARENT = {
     "AMKopi BG-LL": "BG-LL", "AMKopi BG-L2": "BG-L2",
 }
 
-# label, linked stand form_name (None = placeholder row)
+# label, linked stand form_name (None = placeholder row) — exact order of omset.pdf
 PIVOT_ROWS_SEED = [
-    ("R-1", "R-1"), ("R-2", "R-2"), ("R-4", "R-4"), ("R-5", None), ("LIPPO", "Lippo"),
-    ("SUNCITY", "SUNCITY"), ("trans", "TRANS"), ("PA-1", "PA-1"), ("ITC-UG", "ITC-UG"),
-    ("ITC-FC2", "ITC-FC2"), ("BG-L2", "BG-L2"), ("BG-LL", "BG-LL"), ("TP-1", "TP"),
-    ("TP-2", "AMK PREMIUM"), ("TP-3", "TP-3"), ("WTC", "WTC"), ("KAZA", "KAZA"), ("DELTA", "delta"),
-    ("GC", "gc"), ("PTC", "PTC"), ("CITO", None), ("GREEN TEA", None), ("THAI TEA", None),
-] + [(f"(KOSONG {i})", None) for i in range(1, 17)] + [
+    ("R-1", "R-1"), ("R-2", "R-2"), ("R-4", "R-4"), ("R-5", None), ("CITO", None), ("delta", None),
+    ("trans", "TRANS"), ("GRANDCITY", None), ("Lippo", "Lippo"), ("PA-1", "PA-1"), ("ITC-UG", "ITC-UG"),
+    ("ITC-UG MD", None), ("BG-L2", "BG-L2"), ("ITC-FC2", "ITC-FC2"), ("ITC-FC3", None), ("DONUTS", None),
+    ("ITC-PTT", None), ("TP-1", "TP"), ("GREEN TEA", None), ("THAI TEA", None), ("TP-2", "AMK PREMIUM"),
+    ("GREEN TEA", None), ("CHOCO", None), ("TP-3", "TP-3"), ("BG-LL", "BG-LL"), ("GREEN TEA", None),
+    ("THAI TEA", None), ("BG-GL", None), ("GREEN TEA", None), ("THAI TEA", None), ("BG-LG", None),
+    ("GREEN TEA", None), ("THAI TEA", None), ("WTC", "WTC"), ("SUNCITY", "SUNCITY"), ("KAZA", "KAZA"),
+    ("DTC", None), ("delta", "delta"), ("gc", "gc"),
     ("AMKopi R-1", "AMKopi R-1"), ("AMKopi R-2", "AMKopi R-2"), ("AMKopi R-4", "AMKopi R-4"),
     ("AMKopi TP-1", "AMKopi TP-1"), ("AMKopi TP-2", "AMKopi TP-2"), ("AMKopi TP-3", "AMKopi TP-3"),
-    ("AMKopi GC", "AMKopi GC"), ("AMKopi Delta", "AMKopi Delta"), ("AMKopi BG-LL", "AMKopi BG-LL"),
-    ("AMKopi BG-L2", "AMKopi BG-L2"), ("AMKopi PTC", None),
+    ("AMKopi GC", "AMKopi GC"), ("AMKopi Delta", "AMKopi Delta"), ("AMKopi BG-L2", "AMKopi BG-L2"),
+    ("AMKopi BG-LL", "AMKopi BG-LL"), ("AMKopi PTC", "PTC"),
 ]
+
+# column order of sal.pdf
+SPG_MASTER_SEED = ["AINI", "MEGA", "MEGHA", "ZILDA", "DWI", "SHELA", "DINNI", "MAY", "DESI", "DWIE", "IDA",
+                   "LINA", "JIHAN", "KARTIKA", "AJENG", "PITRI", "FEBRI", "TINA", "PIPIT", "UMAR", "NADILA",
+                   "WAHYU", "APRIL", "FITRI", "ALIF", "NOVI", "ANGEL", "NOFITA", "TRI", "IIN", "NIKMA",
+                   "YANI", "REFI", "NANA", "EKA", "ROMLAH", "YUYUN", "PUJI", "SARI"]
+
+
+async def migrate_v3():
+    if await db.meta.find_one({"key": "v3_pdf_layout"}):
+        return
+    stands = await db.stands.find({}, {"_id": 0}).to_list(500)
+    by_form = {s["form_name"]: s for s in stands}
+    await db.pivot_rows.delete_many({})
+    await db.pivot_rows.insert_many([
+        {"id": new_id(), "label": lbl, "stand_id": by_form[f]["id"] if f in by_form else None, "sort_order": i}
+        for i, (lbl, f) in enumerate(PIVOT_ROWS_SEED, start=1)])
+    if await db.spg_master.count_documents({}) == 0:
+        await db.spg_master.insert_many([{"id": new_id(), "name": n, "sort_order": i, "is_active": True}
+                                         for i, n in enumerate(SPG_MASTER_SEED, start=1)])
+    had_dummy = await db.daily_inputs.count_documents({"is_dummy": True})
+    await db.daily_inputs.delete_many({"is_dummy": True})
+    if had_dummy:
+        await generate_dummy(7)
+    await db.meta.insert_one({"key": "v3_pdf_layout", "at": now_iso()})
 
 
 async def migrate_v2():
@@ -518,6 +545,7 @@ async def seed():
             docs.append(d)
         await db.stands.insert_many(docs)
     await migrate_v2()
+    await migrate_v3()
     if not await db.meta.find_one({"key": "dummy_seeded"}):
         await generate_dummy(7)
         await db.meta.insert_one({"key": "dummy_seeded", "at": now_iso()})
