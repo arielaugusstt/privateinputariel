@@ -1,34 +1,44 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+.field {
+    @apply w-full bg-[#F5F5F7] border border-[#D2D2D7] rounded-xl px-3 py-2 text-sm text-[#1D1D1F] placeholder:text-[#C7C7CC] transition-colors duration-150 focus:border-black focus:bg-white focus:outline-none;
+    font-variant-numeric: tabular-nums;
+  }
+  .label-text {
+    @apply text-[10px] font-semibold uppercase tracking-wider text-[#6E6E73];
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 bg-black text-white border border-black rounded-xl px-4 py-2.5 text-sm font-medium transition-[background-color,transform] duration-150 hover:bg-[#1D1D1F] active:scale-[0.98] disabled:opacity-40;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-1.5 bg-white text-[#1D1D1F] border border-[#D2D2D7] rounded-xl px-3 py-2.5 text-sm font-medium transition-[background-color,transform] duration-150 hover:bg-[#F5F5F7] active:scale-[0.98] disabled:opacity-40;
+  }
+  .btn-chip {
+    @apply inline-flex items-center gap-1 bg-black text-white rounded-full px-3 py-1 text-xs font-semibold transition-transform active:scale-95;
+  }
+  .icon-btn {
+    @apply inline-flex items-center justify-center w-9 h-9 shrink-0 rounded-xl border border-[#D2D2D7] bg-white text-[#1D1D1F] transition-[background-color,transform] hover:bg-[#F5F5F7] active:scale-95;
+  }
+  .chip {
+    @apply shrink-0 bg-white text-[#6E6E73] border border-[#D2D2D7] rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors duration-150 hover:border-black/50;
+  }
+  .chip-active {
+    @apply bg-black text-white border-black hover:border-black;
+  }
+
+.tnum {
+  font-variant-numeric: tabular-nums;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
 }
-
-.App-link {
-    color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+.fade-up {
+  animation: fadeUp 0.35s ease-out both;
 }

@@ -1,0 +1,161 @@
+{
+  "project_title": "AMK Daily Input & Pivot Engine",
+  "archetype": "Apple Monochrome Minimalist",
+  "theme": {
+    "mode": "light",
+    "description": "Strictly Apple Monochrome with solid black buttons, white crisp cards, subtle gray surfaces, and clean 1px borders. Zero colorful accent gradients.",
+    "color_palette": {
+      "black_primary": "#000000",
+      "off_black": "#1D1D1F",
+      "pure_white": "#FFFFFF",
+      "apple_gray_bg": "#F5F5F7",
+      "border_gray": "#D2D2D7",
+      "subtle_gray_hover": "#E8E8ED",
+      "muted_text": "#6E6E73",
+      "light_border": "#E5E5EA",
+      "sync_draft_bg": "#F2F2F7",
+      "sync_draft_text": "#1D1D1F",
+      "sync_server_bg": "#000000",
+      "sync_server_text": "#FFFFFF"
+    }
+  },
+  "typography": {
+    "font_family_primary": "SF Pro Display, -apple-system, BlinkMacSystemFont, 'Inter', sans-serif",
+    "font_family_mono_tabular": "'SF Mono', SFProText-Medium, 'Inter', monospace",
+    "classes": {
+      "tabular_nums": "tabular-nums tracking-tight font-mono",
+      "heading_h1": "text-2xl sm:text-3xl font-bold tracking-tight text-[#1D1D1F]",
+      "heading_h2": "text-xl sm:text-2xl font-semibold tracking-tight text-[#1D1D1F]",
+      "heading_h3": "text-base sm:text-lg font-semibold tracking-normal text-[#1D1D1F]",
+      "body_text": "text-sm text-[#1D1D1F] leading-relaxed",
+      "caption_text": "text-xs text-[#6E6E73] font-medium",
+      "label_text": "text-xs font-semibold uppercase tracking-wider text-[#6E6E73]"
+    }
+  },
+  "header_navigation": {
+    "sticky_header": {
+      "style": "sticky top-0 z-40 w-full backdrop-blur-md bg-white/80 border-b border-[#D2D2D7]/60 px-4 py-3 shadow-sm transition-all",
+      "components": [
+        "Brand identity title: AMK Engine",
+        "Sync status pill: 'Tersimpan di HP (Draft Lokal)' (bg-[#F2F2F7] text-[#1D1D1F] border border-[#D2D2D7]) OR 'Tersinkronisasi Server' (bg-black text-white)",
+        "Single-day Date Picker trigger button with formatted date",
+        "Quick filter chips: 'Semua', 'AMK', 'AMKopi', 'Belum Diisi'"
+      ]
+    },
+    "sticky_bottom_nav": {
+      "style": "fixed bottom-0 left-0 right-0 z-50 backdrop-blur-lg bg-white/85 border-t border-[#D2D2D7] px-2 py-2 shadow-lg",
+      "tabs": [
+        {
+          "id": "input",
+          "label": "Input Harian",
+          "icon": "Edit3",
+          "data_testid": "nav-tab-input"
+        },
+        {
+          "id": "wa",
+          "label": "WA Report",
+          "icon": "MessageSquare",
+          "data_testid": "nav-tab-wa"
+        },
+        {
+          "id": "pivot",
+          "label": "Pivot & Export",
+          "icon": "BarChart3",
+          "data_testid": "nav-tab-pivot"
+        },
+        {
+          "id": "settings",
+          "label": "Settings",
+          "icon": "Settings",
+          "data_testid": "nav-tab-settings"
+        }
+      ]
+    }
+  },
+  "layout_and_cards": {
+    "mobile_first_rule": "Vertical stacked cards per stand. NO horizontal scrolling container on mobile screen.",
+    "container_padding": "px-4 pt-4 pb-24 max-w-2xl mx-auto space-y-4",
+    "card_style": "bg-white rounded-2xl border border-[#D2D2D7]/80 p-4 sm:p-5 shadow-sm space-y-3 relative transition-all duration-200 hover:border-black/40",
+    "stand_card_structure": {
+      "header": "Stand Name, Type Badge (AMK / AMKopi), Fill Status Indicator",
+      "omset_input": "Full-width numeric field for Omset Rp with automatic Rp currency formatting and tabular-nums",
+      "cups_grid": "3-column grid (12oz, 22oz, 16oz) numeric input fields with crisp borders and integer validation",
+      "spg_grid": "3-column grid (SPG 1, SPG 2, SPG 3) text input fields with datalist auto-complete suggestions"
+    }
+  },
+  "tabs_specifications": {
+    "tab_1_input_harian": {
+      "title": "Input Harian Sales & Cup",
+      "description": "List of stands with Omset Rp, Cup sizes, and SPG inputs",
+      "features": [
+        "Filter stand cards by quick chips (Semua, AMK, AMKopi, Belum Diisi)",
+        "Instant local draft auto-save to localStorage on every change",
+        "Visual completion checkmark on card header when Omset > 0",
+        "Reset and Sync buttons in floating bar or bottom actions"
+      ]
+    },
+    "tab_2_wa_generator": {
+      "title": "WA Report Generator",
+      "description": "Formats daily entries into structured WhatsApp text report for direct copying",
+      "features": [
+        "Monospaced Live Preview card with dark mode Apple terminal aesthetic",
+        "Copy to Clipboard button ('Salin Ke WhatsApp') with visual toast notification",
+        "Direct WhatsApp link launcher ('Buka WhatsApp')"
+      ]
+    },
+    "tab_3_pivot_and_export": {
+      "title": "Pivot & Excel Export",
+      "description": "Multi-matrix analytics with customizable date range picker",
+      "matrices": [
+        "Matrix 1: Total Omset (Rp) per Stand vs Date",
+        "Matrix 2: Percup Sales Matrix (12oz, 22oz, 16oz) per Stand",
+        "Matrix 3: SPG Shift Schedule Matrix per Stand"
+      ],
+      "excel_export": "Single button trigger generating Excel XLSX file with 3 distinct sheets (Sheet 1: Omset, Sheet 2: Percup, Sheet 3: SPG Detail)"
+    },
+    "tab_4_settings": {
+      "title": "Master Data & Preferences",
+      "description": "Manage stands, item master data, and dummy data triggers",
+      "features": [
+        "CRUD Stand List (Nama Stand, Kode, Tipe: AMK/AMKopi)",
+        "CRUD Item Master List (Key & Cup sizes)",
+        "Button: Generate Data Dummy (Populates 7 days of realistic sales data)",
+        "Button: Hapus Semua Data (Clears local draft database with confirmation dialog)"
+      ]
+    },
+    "login_page": {
+      "title": "Login Owner AMK Engine",
+      "style": "Full screen centered card, subtle background bg-[#F5F5F7]",
+      "inputs": ["Password Owner"],
+      "action": "Masuk Engine"
+    }
+  },
+  "button_and_input_styles": {
+    "primary_button": "w-full bg-[#000000] text-white hover:bg-[#1D1D1F] active:scale-[0.98] transition-all font-medium py-2.5 px-4 rounded-xl text-sm shadow-sm flex items-center justify-center gap-2 border border-black",
+    "secondary_button": "bg-white text-[#1D1D1F] hover:bg-[#F5F5F7] active:scale-[0.98] transition-all font-medium py-2 px-3 rounded-xl text-sm border border-[#D2D2D7] flex items-center justify-center gap-1.5",
+    "input_field": "w-full bg-[#F5F5F7] border border-[#D2D2D7] focus:border-black focus:bg-white focus:outline-none rounded-xl px-3 py-2 text-sm text-[#1D1D1F] transition-all tabular-nums",
+    "filter_chip_active": "bg-black text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-xs transition-all",
+    "filter_chip_inactive": "bg-white text-[#6E6E73] border border-[#D2D2D7] hover:border-black/50 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+  },
+  "testing_and_data_attributes": {
+    "rule": "Every interactive input, filter, tab button, table, and modal MUST contain kebab-case data-testid attribute.",
+    "examples": [
+      "data-testid='input-omset-stand-1'",
+      "data-testid='input-cup-12oz-stand-1'",
+      "data-testid='input-spg1-stand-1'",
+      "data-testid='filter-chip-amk'",
+      "data-testid='nav-tab-input'",
+      "data-testid='btn-copy-wa'",
+      "data-testid='btn-export-excel'",
+      "data-testid='sync-status-pill'"
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Strictly follow the Apple Monochrome design language: pure black (#000000), off-black (#1D1D1F), pure white (#FFFFFF), Apple gray background (#F5F5F7), border gray (#D2D2D7). No colorful status bars or rainbow badges.",
+    "Ensure numbers use tabular-nums font styling for clean alignment in input cards and pivot tables.",
+    "Keep mobile layout strictly vertical with card stacks; no horizontal overflow on mobile viewports.",
+    "Use Bahasa Indonesia for all UI labels, field titles, sync statuses, toast notifications, and WA output text.",
+    "Ensure all interactive components have appropriate data-testid attributes.",
+    "Use Sonner for toast notifications when copying WA reports, saving drafts, or clearing data."
+  ]
+}
