@@ -11,6 +11,7 @@ import { useAuth } from "@/context/AuthContext";
 import { ItemDialog, StandDialog } from "@/components/MasterDialogs";
 import { Section, Row } from "@/components/SettingsUI";
 import { SpgMasterSection, PivotRowsSection } from "@/components/MasterLists";
+import ChangePassword from "@/components/ChangePassword";
 
 const dropCleanDraft = (d) => {
   try {
@@ -129,6 +130,7 @@ export default function SettingsTab({ stands, items, spgMaster, pivotRows, reloa
           <p data-testid="account-email" className="text-sm text-[#1D1D1F] truncate">{user?.email}</p>
           <button data-testid="btn-logout" onClick={logout} className="btn-secondary"><LogOut className="w-4 h-4" /> Keluar</button>
         </div>
+        <ChangePassword />
       </Section>
 
       <ItemDialog item={editItem} busy={busy} onClose={() => setEditItem(null)} onSave={saveItem} />

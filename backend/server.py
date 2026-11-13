@@ -110,6 +110,25 @@ async def me(user: dict = Depends(current_user)):
     return user
 
 
+class ChangePasswordIn(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@api.post("/auth/change-password")
+async def change_password(body: ChangePasswordIn, user: dict = Depends(current_user)):
+    if len(body.new_password) < 8:
+        raise HTTPException(422, "Password baru minimal 8 karakter")
+    doc = await db.users.find_one({"id": user["id"]})
+    if not verify_password(body.current_password, doc["password_hash"]):
+        raise HTTPException(400, "Password saat ini salah")
+    if body.current_password == body.new_password:
+        raise HTTPException(422, "Password baru harus berbeda dari password lama")
+    await db.users.update_one({"id": user["id"]},
+                              {"$set": {"password_hash": hash_password(body.new_password), "password_changed_at": now_iso()}})
+    return {"ok": True}
+
+
 # ---------- Master data ----------
 class ItemIn(BaseModel):
     name: str = Field(min_length=1)
@@ -546,9 +565,6 @@ async def seed():
         await db.stands.insert_many(docs)
     await migrate_v2()
     await migrate_v3()
-    if not await db.meta.find_one({"key": "dummy_seeded"}):
-        await generate_dummy(7)
-        await db.meta.insert_one({"key": "dummy_seeded", "at": now_iso()})
 
 
 async def ensure_indexes() -> None:
