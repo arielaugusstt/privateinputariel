@@ -62,6 +62,10 @@ function Shell() {
   };
   const visible = inputStands.filter((s) => (filter === "all" ? true : filter === "empty" ? isEmpty(s) : s.category === filter));
   const dated = tab === "input" || tab === "wa";
+  const switchTab = async (t) => {
+    if (daily.status === "draft") await daily.saveNow();
+    setTab(t);
+  };
 
   return (
     <div className="min-h-screen bg-[#F5F5F7]">
@@ -88,7 +92,7 @@ function Shell() {
           <SettingsTab stands={stands} items={allItems} spgMaster={spgMaster} pivotRows={pivotRows} reloadMaster={reload} onDataChanged={() => setReloadKey((k) => k + 1)} />
         )}
       </main>
-      <BottomNav tab={tab} setTab={setTab} />
+      <BottomNav tab={tab} setTab={switchTab} />
     </div>
   );
 }

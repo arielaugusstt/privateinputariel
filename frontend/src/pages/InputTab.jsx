@@ -17,8 +17,8 @@ export default function InputTab({ stands, items, daily, visible, spgNames }) {
   const t = computeTotals(stands, items, entries);
   const filled = inputStands.filter((s) => Number(entries[s.id]?.omset) > 0).length;
   const byId = Object.fromEntries(stands.map((s) => [s.id, s]));
-  const totOmset = stands.reduce((a, s) => a + (Number(entries[s.id]?.omset) || 0), 0);
-  const totQris = stands.reduce((a, s) => a + (Number(entries[s.id]?.qris) || 0), 0);
+  const totOmset = inputStands.reduce((a, s) => a + (Number(entries[s.id]?.omset) || 0), 0);
+  const totQris = inputStands.reduce((a, s) => a + (Number(entries[s.id]?.qris) || 0), 0);
   const totSisa = totOmset - totQris;
 
   const onSave = async () => {

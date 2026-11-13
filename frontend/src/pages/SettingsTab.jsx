@@ -121,8 +121,8 @@ export default function SettingsTab({ stands, items, spgMaster, pivotRows, reloa
         ))}
       </Section>
 
-      <SpgMasterSection spgMaster={spgMaster} run={run} reload={reloadMaster} askDelete={(name, fn) => setConfirm({ kind: "custom", name, fn })} />
-      <PivotRowsSection pivotRows={pivotRows} stands={stands} run={run} reload={reloadMaster} askDelete={(name, fn) => setConfirm({ kind: "custom", name, fn })} />
+      <SpgMasterSection spgMaster={spgMaster} run={run} busy={busy} reload={reloadMaster} askDelete={(name, fn) => setConfirm({ kind: "custom", name, fn })} />
+      <PivotRowsSection pivotRows={pivotRows} stands={stands} run={run} busy={busy} reload={reloadMaster} askDelete={(name, fn) => setConfirm({ kind: "custom", name, fn })} />
 
       <Section title="Akun">
         <div className="p-4 flex items-center justify-between gap-3">
@@ -131,8 +131,8 @@ export default function SettingsTab({ stands, items, spgMaster, pivotRows, reloa
         </div>
       </Section>
 
-      <ItemDialog item={editItem} onClose={() => setEditItem(null)} onSave={saveItem} />
-      <StandDialog stand={editStand} stands={stands} onClose={() => setEditStand(null)} onSave={saveStand} />
+      <ItemDialog item={editItem} busy={busy} onClose={() => setEditItem(null)} onSave={saveItem} />
+      <StandDialog stand={editStand} busy={busy} stands={stands} onClose={() => setEditStand(null)} onSave={saveStand} />
       <AlertDialog open={!!confirm} onOpenChange={(o) => !o && setConfirm(null)}>
         <AlertDialogContent data-testid="confirm-dialog" className="rounded-2xl max-w-sm">
           <AlertDialogHeader>

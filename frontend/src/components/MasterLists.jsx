@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { slug } from "@/lib/format";
 import { Section, Row } from "@/components/SettingsUI";
 
-function SimpleDialog({ open, title, onClose, onSubmit, testid, children }) {
+function SimpleDialog({ open, title, onClose, onSubmit, testid, busy, children }) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent data-testid={testid} className="max-w-md rounded-2xl">
@@ -16,7 +16,7 @@ function SimpleDialog({ open, title, onClose, onSubmit, testid, children }) {
           {children}
           <div className="grid grid-cols-2 gap-2 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary">Batal</button>
-            <button data-testid={`${testid}-save`} type="submit" className="btn-primary">Simpan</button>
+            <button data-testid={`${testid}-save`} type="submit" disabled={busy} className="btn-primary">Simpan</button>
           </div>
         </form>
       </DialogContent>
@@ -39,7 +39,7 @@ const useForm = (src, empty) => {
   return [f, (k) => (v) => setF((p) => ({ ...p, [k]: v }))];
 };
 
-export function SpgMasterSection({ spgMaster, run, reload, askDelete }) {
+export function SpgMasterSection({ spgMaster, run, reload, askDelete, busy }) {
   const [edit, setEdit] = useState(null);
   const [f, set] = useForm(edit, { name: "", sort_order: 0, is_active: true });
   const save = () => run(async () => {
@@ -55,7 +55,7 @@ export function SpgMasterSection({ spgMaster, run, reload, askDelete }) {
       {spgMaster.map((s) => (
         <Row key={s.id} testid={`spg-row-${slug(s.name)}`} title={s.name} meta={`Urutan ${s.sort_order} · ${s.is_active ? "Aktif" : "Nonaktif"}`} onEdit={() => setEdit(s)} onDelete={() => askDelete(s.name, async () => { await api.delete(`/spg-master/${s.id}`); await reload(); })} />
       ))}
-      <SimpleDialog open={!!edit} title={edit?.id ? "Edit SPG" : "Tambah SPG"} onClose={() => setEdit(null)} onSubmit={save} testid="spg-dialog">
+      <SimpleDialog open={!!edit} title={edit?.id ? "Edit SPG" : "Tambah SPG"} onClose={() => setEdit(null)} onSubmit={save} busy={busy} testid="spg-dialog">
         <L label="Nama SPG"><input data-testid="spg-name-input" required className="field uppercase" value={f.name} onChange={(e) => set("name")(e.target.value.toUpperCase())} /></L>
         <L label="Urutan kolom"><input data-testid="spg-order-input" type="number" className="field tnum" value={f.sort_order} onChange={(e) => set("sort_order")(Number(e.target.value))} /></L>
         <label className="flex items-center justify-between py-1.5">
@@ -67,7 +67,7 @@ export function SpgMasterSection({ spgMaster, run, reload, askDelete }) {
   );
 }
 
-export function PivotRowsSection({ pivotRows, stands, run, reload, askDelete }) {
+export function PivotRowsSection({ pivotRows, stands, run, reload, askDelete, busy }) {
   const [edit, setEdit] = useState(null);
   const [open, setOpen] = useState(false);
   const [f, set] = useForm(edit, { label: "", stand_id: null, sort_order: 0 });
@@ -93,7 +93,7 @@ export function PivotRowsSection({ pivotRows, stands, run, reload, askDelete }) 
       {open && pivotRows.map((r) => (
         <Row key={r.id} testid={`pivot-row-${slug(r.label)}`} title={`${r.sort_order}. ${r.label}`} meta={r.stand_id ? `Stand: ${byId[r.stand_id]?.form_name || "(stand terhapus)"}` : "Placeholder"} onEdit={() => setEdit(r)} onDelete={() => askDelete(r.label, async () => { await api.delete(`/pivot-rows/${r.id}`); await reload(); })} />
       ))}
-      <SimpleDialog open={!!edit} title={edit?.id ? "Edit Baris" : "Tambah Baris"} onClose={() => setEdit(null)} onSubmit={save} testid="pivot-row-dialog">
+      <SimpleDialog open={!!edit} title={edit?.id ? "Edit Baris" : "Tambah Baris"} onClose={() => setEdit(null)} onSubmit={save} busy={busy} testid="pivot-row-dialog">
         <L label="Label baris"><input data-testid="pivot-row-label-input" required className="field" value={f.label} onChange={(e) => set("label")(e.target.value)} /></L>
         <L label="Ambil data dari stand">
           <select data-testid="pivot-row-stand-select" className="field" value={f.stand_id || ""} onChange={(e) => set("stand_id")(e.target.value || null)}>

@@ -15,7 +15,7 @@ const Toggle = ({ label, checked, onChange, testid }) => (
   </label>
 );
 
-function FormDialog({ open, onClose, title, onSubmit, children, testid }) {
+function FormDialog({ open, onClose, title, onSubmit, children, testid, busy }) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent data-testid={testid} className="max-w-md rounded-2xl max-h-[90vh] overflow-y-auto">
@@ -26,7 +26,7 @@ function FormDialog({ open, onClose, title, onSubmit, children, testid }) {
           {children}
           <div className="grid grid-cols-2 gap-2 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary">Batal</button>
-            <button data-testid={`${testid}-save`} type="submit" className="btn-primary">Simpan</button>
+            <button data-testid={`${testid}-save`} type="submit" disabled={busy} className="btn-primary">Simpan</button>
           </div>
         </form>
       </DialogContent>
@@ -36,14 +36,14 @@ function FormDialog({ open, onClose, title, onSubmit, children, testid }) {
 
 const EMPTY_ITEM = { name: "", code_wa: "", sort_order: 0, is_active: true };
 
-export function ItemDialog({ item, onClose, onSave }) {
+export function ItemDialog({ item, onClose, onSave, busy }) {
   const [f, setF] = useState(EMPTY_ITEM);
   useEffect(() => {
     if (item) setF({ ...EMPTY_ITEM, ...item });
   }, [item]);
   const set = (k) => (v) => setF((p) => ({ ...p, [k]: v }));
   return (
-    <FormDialog open={!!item} onClose={onClose} title={item?.id ? "Edit Item" : "Tambah Item"} onSubmit={() => onSave(f)} testid="item-dialog">
+    <FormDialog open={!!item} onClose={onClose} title={item?.id ? "Edit Item" : "Tambah Item"} onSubmit={() => onSave(f)} busy={busy} testid="item-dialog">
       <Field label="Nama (mis. 12oz)"><input data-testid="item-name-input" required className="field" value={f.name} onChange={(e) => set("name")(e.target.value)} /></Field>
       <Field label="Kode WA (Ck / Cb / Csdng)"><input data-testid="item-code-input" className="field" value={f.code_wa} onChange={(e) => set("code_wa")(e.target.value)} /></Field>
       <Field label="Urutan"><input data-testid="item-order-input" type="number" className="field tnum" value={f.sort_order} onChange={(e) => set("sort_order")(Number(e.target.value))} /></Field>
@@ -57,7 +57,7 @@ const EMPTY_STAND = {
   input_order: 0, wa_group: null, wa_order: 0, show_csedang_wa: false, extra_wa_suffix: "", parent_stand_id: null,
 };
 
-export function StandDialog({ stand, stands = [], onClose, onSave }) {
+export function StandDialog({ stand, stands = [], onClose, onSave, busy }) {
   const [f, setF] = useState(EMPTY_STAND);
   useEffect(() => {
     if (stand) setF({ ...EMPTY_STAND, ...stand, extra_wa_suffix: stand.extra_wa_suffix || "" });
@@ -68,7 +68,7 @@ export function StandDialog({ stand, stands = [], onClose, onSave }) {
   );
   const submit = () => onSave({ ...f, extra_wa_suffix: f.extra_wa_suffix || null });
   return (
-    <FormDialog open={!!stand} onClose={onClose} title={stand?.id ? "Edit Stand" : "Tambah Stand"} onSubmit={submit} testid="stand-dialog">
+    <FormDialog open={!!stand} onClose={onClose} title={stand?.id ? "Edit Stand" : "Tambah Stand"} onSubmit={submit} busy={busy} testid="stand-dialog">
       {txt("form_name", "Nama di Form", "stand-form-name-input", true)}
       <div className="grid grid-cols-2 gap-2">
         {txt("wa_name", "Nama di WA", "stand-wa-name-input")}

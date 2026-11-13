@@ -56,7 +56,7 @@ export function buildSal(stands, spgMaster, docs, dates) {
   const names = [...master, ...[...found].filter((n) => !master.includes(n)).sort()];
   const header = ["TGL", ...names];
   const rows = dates.map((d) => [lbl(d), ...names.map((n) => cells[`${d}|${n}`] || "")]);
-  const shifts = names.map((n) => dates.reduce((a, d) => a + (cells[`${d}|${n}`] ? cells[`${d}|${n}`].split("/").length : 0), 0));
+  const shifts = names.map((n) => dates.filter((d) => cells[`${d}|${n}`]).length);
   return { header, rows, totals: [["TOTAL HADIR (SHIFT)", ...shifts]] };
 }
 

@@ -34,6 +34,7 @@ INDEXES: dict[str, list[IndexModel]] = {
     "daily_inputs": [IndexModel([("date", ASCENDING)], name="date", unique=True)],
     "items": [IndexModel([("id", ASCENDING)], name="id", unique=True)],
     "stands": [IndexModel([("id", ASCENDING)], name="id", unique=True)],
+    "spg_master": [IndexModel([("name", ASCENDING)], name="name", unique=True)],
 }
 
 app = FastAPI()
@@ -192,9 +193,21 @@ async def update_spg(sid: str, body: SpgIn, user: dict = Depends(current_user)):
     if await db.spg_master.find_one({"name": name, "id": {"$ne": sid}}):
         raise HTTPException(409, "Nama SPG sudah ada")
     d = {**body.model_dump(), "name": name}
-    r = await db.spg_master.update_one({"id": sid}, {"$set": d})
-    if not r.matched_count:
+    old = await db.spg_master.find_one({"id": sid})
+    if not old:
         raise HTTPException(404, "SPG tidak ditemukan")
+    await db.spg_master.update_one({"id": sid}, {"$set": d})
+    if old["name"] != name:
+        async for doc in db.daily_inputs.find({}, {"entries": 1}):
+            ents = doc.get("entries", {})
+            changed = False
+            for e in ents.values():
+                spg = e.get("spg", [])
+                if old["name"] in spg:
+                    e["spg"] = [name if x == old["name"] else x for x in spg]
+                    changed = True
+            if changed:
+                await db.daily_inputs.update_one({"_id": doc["_id"]}, {"$set": {"entries": ents}})
     return {"id": sid, **d}
 
 
@@ -259,6 +272,9 @@ async def delete_item(item_id: str, user: dict = Depends(current_user)):
 async def create_stand(body: StandIn, user: dict = Depends(current_user)):
     doc = {"id": new_id(), **stand_doc(body)}
     await db.stands.insert_one(doc)
+    last = await db.pivot_rows.find_one({}, sort=[("sort_order", -1)])
+    await db.pivot_rows.insert_one({"id": new_id(), "label": doc["omset_name"], "stand_id": doc["id"],
+                                    "sort_order": (last["sort_order"] if last else 0) + 1})
     doc.pop("_id", None)
     return doc
 
@@ -471,11 +487,13 @@ async def migrate_v2():
     async for doc in db.daily_inputs.find({"is_dummy": False}):
         ents = doc.get("entries", {})
         for sid, e in ents.items():
-            e["spg"] = ["", "", ""] if sid in amkopi_ids else ([norm_name(x) for x in e.get("spg", [])] + ["", "", ""])[:3]
+            if sid not in amkopi_ids:
+                e["spg"] = ([norm_name(x) for x in e.get("spg", [])] + ["", "", ""])[:3]
             e.setdefault("qris", 0)
         await db.daily_inputs.update_one({"_id": doc["_id"]}, {"$set": {"entries": ents}})
+    had_dummy = await db.daily_inputs.count_documents({"is_dummy": True})
     await db.daily_inputs.delete_many({"is_dummy": True})
-    if await db.meta.find_one({"key": "dummy_seeded"}):
+    if had_dummy:
         await generate_dummy(7)
     await db.meta.insert_one({"key": "v2_qris_spg", "at": now_iso()})
 

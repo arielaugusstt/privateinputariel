@@ -127,7 +127,7 @@ export default function PivotTab({ stands, items, spgMaster, pivotRows }) {
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Muat Ulang
           </button>
           <button data-testid="btn-export-excel" onClick={onExport} disabled={loading || !valid} className="btn-primary">
-            <Download className="w-4 h-4" /> Download Excel (.xlsx)
+            <Download className="w-4 h-4" /> Excel (.xlsx)
           </button>
         </div>
         {!valid && <p data-testid="pivot-range-error" className="text-xs font-semibold text-[#1D1D1F]">Rentang tidak valid: isi kedua tanggal, awal ≤ akhir, maksimal {MAX_DAYS} hari.</p>}
@@ -140,9 +140,9 @@ export default function PivotTab({ stands, items, spgMaster, pivotRows }) {
           </button>
         ))}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="space-y-2">
         {mode === "sal" && (
-          <div className="flex p-1 bg-[#E8E8ED] rounded-xl flex-1">
+          <div className="flex p-1 bg-[#E8E8ED] rounded-xl">
             {[["gaji", "Tabel Gaji SPG"], ["stand", "Tampilan Per Stand"]].map(([id, label]) => (
               <button key={id} data-testid={`sal-view-${id}`} onClick={() => setSalView(id)} className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${salView === id ? "bg-white text-black shadow-sm" : "text-[#6E6E73]"}`}>
                 {label}
@@ -150,7 +150,7 @@ export default function PivotTab({ stands, items, spgMaster, pivotRows }) {
             ))}
           </div>
         )}
-        <button data-testid="btn-copy-tsv" onClick={onCopyTsv} disabled={!valid} className={`btn-secondary ${mode === "sal" ? "" : "flex-1"}`}>
+        <button data-testid="btn-copy-tsv" onClick={onCopyTsv} disabled={!valid} className="btn-secondary w-full">
           <Copy className="w-4 h-4" /> Copy untuk Google Sheets (TSV)
         </button>
       </div>

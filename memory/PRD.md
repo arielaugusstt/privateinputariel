@@ -8,6 +8,7 @@ User choices: owner-only password login, Bahasa Indonesia, single Excel file wit
 Platform runs React + FastAPI + MongoDB (not Laravel/PHP). Backend: /app/backend/server.py (JWT Bearer auth, master CRUD, daily-input per-stand merge upsert, dummy generate/clear, seed on startup). Frontend: React + Tailwind, SheetJS (xlsx). Hooks: useDaily (local draft, debounce, serialized saves, retry every 30s/online, beforeunload guard).
 
 ## Implemented (2026-11-13)
+- v2 revision: QRIS + Sisa Tunai per stand & daily totals bar (WA unchanged); Pivot OMSET/QRIS/SISA TUNAI on 50 editable fixed rows (provisional list, omset.pdf not provided), TSV copy per tab, Excel sheets OMSET, QRIS, SISA TUNAI, PERCUP, SAL, SPG PER STAND; AMKopi SPG inherits parent stand (locked badge); SPG names UPPERCASE+trimmed; SAL/GAJI payroll matrix (SPG columns, date rows, WA-name cells, TOTAL HADIR (SHIFT) = days worked) + Per Stand view; Settings: Master Daftar SPG, pivot rows editor, stand parent select; new stands auto-added as pivot rows; SPG rename updates history
 - Owner login (arielaug78@gmail.com), brute-force lockout
 - Input Harian cards, filters, live totals, autosave + local draft restore
 - WA Generator with exact template, copy + open WhatsApp
