@@ -35,7 +35,7 @@ export default function WaTab({ date, stands, items, entries }) {
   return (
     <div className="space-y-3 fade-up">
       <div className="grid grid-cols-2 gap-2">
-        <button data-testid="btn-copy-wa" onClick={onCopy} className="btn-primary">
+        <button data-testid="btn-copy-wa" onClick={onCopy} className="btn-primary whitespace-nowrap px-2">
           {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
           {copied ? "Tersalin" : "Copy ke WhatsApp"}
         </button>

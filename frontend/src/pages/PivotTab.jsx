@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Download, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { api, errMsg } from "@/lib/api";
 import { addDays, todayStr, dateRange, fmt } from "@/lib/format";
 import { buildOmset, buildPercup, buildSpg, exportXlsx } from "@/lib/pivot";
+
+const MAX_DAYS = 366;
 
 const MODES = [
   { id: "omset", label: "Omset" },
@@ -47,25 +49,29 @@ export default function PivotTab({ stands, items }) {
   const [docs, setDocs] = useState([]);
   const [mode, setMode] = useState("omset");
   const [loading, setLoading] = useState(false);
+  const reqId = useRef(0);
+  const valid = !!start && !!end && start <= end && dateRange(start, end).length <= MAX_DAYS;
 
   const load = useCallback(async () => {
-    if (start > end) return toast.error("Tanggal awal harus sebelum tanggal akhir");
+    const id = ++reqId.current;
+    setDocs([]);
+    if (!valid) return;
     setLoading(true);
     try {
       const { data } = await api.get("/daily-inputs", { params: { start, end } });
-      setDocs(data);
+      if (id === reqId.current) setDocs(data);
     } catch (e) {
-      toast.error(errMsg(e));
+      if (id === reqId.current) toast.error(errMsg(e));
     } finally {
-      setLoading(false);
+      if (id === reqId.current) setLoading(false);
     }
-  }, [start, end]);
+  }, [start, end, valid]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const dates = useMemo(() => (start <= end ? dateRange(start, end) : []), [start, end]);
+  const dates = useMemo(() => (valid ? dateRange(start, end) : []), [start, end, valid]);
   const m = useMemo(
     () => ({ omset: buildOmset(stands, docs, dates), percup: buildPercup(stands, items, docs, dates), spg: buildSpg(stands, docs, dates) }),
     [stands, items, docs, dates]
@@ -96,10 +102,11 @@ export default function PivotTab({ stands, items }) {
           <button data-testid="pivot-refresh-button" onClick={load} className="btn-secondary">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Muat Ulang
           </button>
-          <button data-testid="btn-export-excel" onClick={onExport} disabled={loading} className="btn-primary">
+          <button data-testid="btn-export-excel" onClick={onExport} disabled={loading || !valid} className="btn-primary">
             <Download className="w-4 h-4" /> Export Excel
           </button>
         </div>
+        {!valid && <p data-testid="pivot-range-error" className="text-xs font-semibold text-[#1D1D1F]">Rentang tidak valid: isi kedua tanggal, awal ≤ akhir, maksimal {MAX_DAYS} hari.</p>}
         <p className="text-[11px] text-[#6E6E73]">{dates.length} hari · {docs.length} hari berisi data · 1 file, 3 sheet (Omset, Percup, SPG)</p>
       </section>
       <div className="flex p-1 bg-[#E8E8ED] rounded-xl">

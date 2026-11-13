@@ -21,7 +21,7 @@ export function buildWaReport(date, stands, items, entries) {
   const ck = idOf("Ck"), cb = idOf("Cb"), cs = idOf("Csdng");
   const cup = (e, id) => {
     const v = id ? Number(e?.cups?.[id]) || 0 : 0;
-    return v > 0 ? String(v) : "";
+    return v > 0 ? fmt(v) : "";
   };
   const line = (s) => {
     const e = entries[s.id] || {};

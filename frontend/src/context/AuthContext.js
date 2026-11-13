@@ -28,6 +28,16 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem("amk_master");
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith("amk_draft_"))
+      .forEach((k) => {
+        try {
+          if (!JSON.parse(localStorage.getItem(k))?.dirty) localStorage.removeItem(k);
+        } catch {
+          localStorage.removeItem(k);
+        }
+      });
     setUser(false);
   }, []);
 

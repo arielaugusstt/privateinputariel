@@ -46,7 +46,7 @@ export default function InputTab({ stands, items, daily, visible, spgNames }) {
       )}
       <div className="fixed bottom-[76px] inset-x-0 z-40 pointer-events-none">
         <div className="max-w-2xl mx-auto px-4 flex justify-end">
-          <button data-testid="save-now-button" onClick={onSave} disabled={status === "syncing"} className="btn-primary pointer-events-auto shadow-lg rounded-full px-5">
+          <button data-testid="save-now-button" onClick={onSave} disabled={status === "syncing" || loading} className="btn-primary pointer-events-auto shadow-lg rounded-full px-5">
             {status === "syncing" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Simpan Sekarang
           </button>

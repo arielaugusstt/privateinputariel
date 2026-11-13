@@ -25,15 +25,17 @@ function useMaster() {
       return { items: [], stands: [] };
     }
   });
+  const [failed, setFailed] = useState(false);
   const reload = useCallback(async () => {
     const { data } = await api.get("/master");
     localStorage.setItem(MASTER_KEY, JSON.stringify(data));
     setMaster(data);
+    setFailed(false);
   }, []);
   useEffect(() => {
-    reload().catch(() => {});
+    reload().catch(() => setFailed(true));
   }, [reload]);
-  return { ...master, reload };
+  return { ...master, reload, failed };
 }
 
 function Shell() {
@@ -42,7 +44,7 @@ function Shell() {
   const [filter, setFilter] = useState("all");
   const [reloadKey, setReloadKey] = useState(0);
   const [spgNames, setSpgNames] = useState([]);
-  const { items: allItems, stands, reload } = useMaster();
+  const { items: allItems, stands, reload, failed } = useMaster();
   const items = useMemo(() => allItems.filter((i) => i.is_active).sort((a, b) => a.sort_order - b.sort_order), [allItems]);
   const daily = useDaily(date, reloadKey);
 
@@ -73,6 +75,12 @@ function Shell() {
         counts={counts}
       />
       <main className="max-w-2xl mx-auto px-4 pt-4 pb-40">
+        {failed && stands.length === 0 && (
+          <div data-testid="master-error" className="bg-white rounded-2xl border border-[#D2D2D7] p-5 text-center space-y-3">
+            <p className="text-sm text-[#1D1D1F]">Gagal memuat daftar stand. Periksa koneksi internet.</p>
+            <button data-testid="master-retry-button" onClick={() => reload().catch(() => {})} className="btn-primary">Coba Lagi</button>
+          </div>
+        )}
         {tab === "input" && <InputTab stands={stands} items={items} daily={daily} visible={visible} spgNames={spgNames} />}
         {tab === "wa" && <WaTab date={date} stands={stands} items={items} entries={daily.entries} />}
         {tab === "pivot" && <PivotTab stands={stands} items={items} />}

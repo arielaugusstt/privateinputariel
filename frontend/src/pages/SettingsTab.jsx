@@ -10,6 +10,14 @@ import { slug } from "@/lib/format";
 import { useAuth } from "@/context/AuthContext";
 import { ItemDialog, StandDialog } from "@/components/MasterDialogs";
 
+const dropCleanDraft = (d) => {
+  try {
+    if (!JSON.parse(localStorage.getItem(`amk_draft_${d}`) || "null")?.dirty) localStorage.removeItem(`amk_draft_${d}`);
+  } catch {
+    localStorage.removeItem(`amk_draft_${d}`);
+  }
+};
+
 const Section = ({ title, action, children }) => (
   <section className="bg-white rounded-2xl border border-[#D2D2D7]/80 overflow-hidden">
     <div className="flex items-center justify-between px-4 py-3 border-b border-[#E5E5EA]">
@@ -79,7 +87,7 @@ export default function SettingsTab({ stands, items, reloadMaster, onDataChanged
     if (c.kind === "stand") run(async () => { await api.delete(`/stands/${c.id}`); await reloadMaster(); }, "Stand dihapus");
     if (c.kind === "clear") run(async () => {
       const { data } = await api.delete("/dummy");
-      (dummy.dates || []).forEach((d) => localStorage.removeItem(`amk_draft_${d}`));
+      (dummy.dates || []).forEach(dropCleanDraft);
       await loadDummy();
       onDataChanged();
       toast.message(`${data.deleted_days} hari data dummy dihapus`);
@@ -88,7 +96,7 @@ export default function SettingsTab({ stands, items, reloadMaster, onDataChanged
 
   const generate = () => run(async () => {
     const { data } = await api.post("/dummy/generate");
-    (await api.get("/dummy/status")).data.dates.forEach((d) => localStorage.removeItem(`amk_draft_${d}`));
+    (await api.get("/dummy/status")).data.dates.forEach(dropCleanDraft);
     await loadDummy();
     onDataChanged();
     toast.message(`${data.created_days} hari data dummy dibuat`);

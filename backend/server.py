@@ -12,7 +12,7 @@ import logging
 import asyncio
 from contextlib import suppress
 from datetime import datetime, timezone, timedelta
-from typing import Optional, Dict, List, Literal
+from typing import Optional, Dict, List, Literal, Annotated
 
 import bcrypt
 import jwt
@@ -200,7 +200,7 @@ async def delete_stand(stand_id: str, user: dict = Depends(current_user)):
 # ---------- Daily input ----------
 class Entry(BaseModel):
     omset: int = Field(0, ge=0)
-    cups: Dict[str, int] = {}
+    cups: Dict[str, Annotated[int, Field(ge=0)]] = {}
     spg: List[str] = []
 
 
@@ -217,12 +217,14 @@ async def get_daily(day: str, user: dict = Depends(current_user)):
 
 @api.post("/daily-input")
 async def save_daily(body: DailyIn, user: dict = Depends(current_user)):
-    entries = {k: v.model_dump() for k, v in body.entries.items()}
+    try:
+        datetime.strptime(body.date, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(422, "Tanggal tidak valid")
     ts = now_iso()
-    await db.daily_inputs.update_one(
-        {"date": body.date},
-        {"$set": {"entries": entries, "updated_at": ts}, "$setOnInsert": {"is_dummy": False}},
-        upsert=True)
+    upd = {f"entries.{k}": v.model_dump() for k, v in body.entries.items() if k.isalnum()}
+    upd.update({"updated_at": ts, "is_dummy": False})
+    await db.daily_inputs.update_one({"date": body.date}, {"$set": upd}, upsert=True)
     return {"ok": True, "date": body.date, "updated_at": ts}
 
 
@@ -230,7 +232,7 @@ async def save_daily(body: DailyIn, user: dict = Depends(current_user)):
 async def list_daily(start: str = Query(pattern=DATE_RE), end: str = Query(pattern=DATE_RE),
                      user: dict = Depends(current_user)):
     return await db.daily_inputs.find(
-        {"date": {"$gte": start, "$lte": end}}, {"_id": 0}).sort("date", 1).to_list(400)
+        {"date": {"$gte": start, "$lte": end}}, {"_id": 0}).sort("date", 1).to_list(1000)
 
 
 @api.get("/spg-names")
@@ -274,9 +276,12 @@ async def generate_dummy(days: int = 7) -> int:
                 "cups": cups,
                 "spg": (random.sample(SPG_POOL, random.randint(1, 3)) + ["", ""])[:3],
             }
-        await db.daily_inputs.update_one(
-            {"date": day}, {"$set": {"entries": entries, "updated_at": now_iso(), "is_dummy": True}},
-            upsert=True)
+        if existing:
+            await db.daily_inputs.update_one(
+                {"date": day, "is_dummy": True}, {"$set": {"entries": entries, "updated_at": now_iso()}})
+        else:
+            await db.daily_inputs.insert_one(
+                {"date": day, "entries": entries, "updated_at": now_iso(), "is_dummy": True})
         created += 1
     return created
 

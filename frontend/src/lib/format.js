@@ -29,7 +29,8 @@ export const longDate = (s) => {
 export const dateRange = (start, end) => {
   const out = [];
   let cur = start;
-  while (cur <= end && out.length < 93) {
+  if (!start || !end) return out;
+  while (cur <= end && out.length < 400) {
     out.push(cur);
     cur = addDays(cur, 1);
   }

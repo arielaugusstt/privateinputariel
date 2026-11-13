@@ -20,7 +20,7 @@ const normalize = (entries) =>
       {
         omset: Number(e.omset) || 0,
         cups: Object.fromEntries(Object.entries(e.cups || {}).map(([k, v]) => [k, Number(v) || 0])),
-        spg: [0, 1, 2].map((i) => (e.spg?.[i] || "").trim()),
+        spg: [0, 1, 2].map((i) => e.spg?.[i] || ""),
       },
     ])
   );
@@ -30,15 +30,22 @@ export function useDaily(date, reloadKey) {
   const [status, setStatus] = useState("synced");
   const [loading, setLoading] = useState(true);
   const timer = useRef(null);
+  const chain = useRef(Promise.resolve());
   const dirtyRef = useRef(false);
   const latest = useRef({ date, entries });
   latest.current = { date, entries };
+
+  const post = useCallback((d, ents) => {
+    const p = chain.current.catch(() => {}).then(() => api.post("/daily-input", { date: d, entries: normalize(ents) }));
+    chain.current = p;
+    return p;
+  }, []);
 
   const sync = useCallback(async (d, ents) => {
     const snapshot = JSON.stringify(ents);
     if (latest.current.date === d) setStatus("syncing");
     try {
-      await api.post("/daily-input", { date: d, entries: normalize(ents) });
+      await post(d, ents);
       const draft = readDraft(d);
       if (!draft || JSON.stringify(draft.entries) === snapshot) {
         writeDraft(d, ents, false);
@@ -49,7 +56,7 @@ export function useDaily(date, reloadKey) {
       if (latest.current.date === d) setStatus("draft");
       return false;
     }
-  }, []);
+  }, [post]);
 
   useEffect(() => {
     let cancel = false;
@@ -64,8 +71,10 @@ export function useDaily(date, reloadKey) {
       .get(`/daily-input/${date}`)
       .then(({ data }) => {
         if (cancel) return;
-        if (draft?.dirty) {
-          sync(date, draft.entries);
+        if (dirtyRef.current || draft?.dirty) {
+          const merged = { ...(data.entries || {}), ...latest.current.entries };
+          dirtyRef.current = true;
+          setEntries(merged);
         } else {
           setEntries(data.entries || {});
           writeDraft(date, data.entries || {}, false);
@@ -77,7 +86,9 @@ export function useDaily(date, reloadKey) {
     return () => {
       cancel = true;
     };
-  }, [date, reloadKey, sync]);
+  }, [date, reloadKey]);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
 
   useEffect(() => {
     if (!dirtyRef.current) return;
@@ -88,12 +99,30 @@ export function useDaily(date, reloadKey) {
   }, [entries, date, sync]);
 
   useEffect(() => {
-    const onOnline = () => {
-      const d = latest.current.date;
-      if (readDraft(d)?.dirty) sync(d, latest.current.entries);
+    const retryAll = () => {
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith("amk_draft_"))
+        .forEach((k) => {
+          const d = k.slice(10);
+          const draft = readDraft(d);
+          if (!draft?.dirty) return;
+          sync(d, d === latest.current.date ? latest.current.entries : draft.entries);
+        });
     };
-    window.addEventListener("online", onOnline);
-    return () => window.removeEventListener("online", onOnline);
+    const onUnload = (e) => {
+      if (Object.keys(localStorage).some((k) => k.startsWith("amk_draft_") && readDraft(k.slice(10))?.dirty)) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    const iv = setInterval(retryAll, 30000);
+    window.addEventListener("online", retryAll);
+    window.addEventListener("beforeunload", onUnload);
+    return () => {
+      clearInterval(iv);
+      window.removeEventListener("online", retryAll);
+      window.removeEventListener("beforeunload", onUnload);
+    };
   }, [sync]);
 
   const update = useCallback((standId, patch) => {
