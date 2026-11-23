@@ -12,6 +12,7 @@ import { ItemDialog, StandDialog } from "@/components/MasterDialogs";
 import { Section, Row } from "@/components/SettingsUI";
 import { SpgMasterSection, PivotRowsSection } from "@/components/MasterLists";
 import ChangePassword from "@/components/ChangePassword";
+import ImportNovember from "@/components/ImportNovember";
 
 const dropCleanDraft = (d) => {
   try {
@@ -122,6 +123,7 @@ export default function SettingsTab({ stands, items, spgMaster, pivotRows, reloa
         ))}
       </Section>
 
+      <ImportNovember onDone={async () => { await reloadMaster(); await loadDummy(); onDataChanged(); }} />
       <SpgMasterSection spgMaster={spgMaster} run={run} busy={busy} reload={reloadMaster} askDelete={(name, fn) => setConfirm({ kind: "custom", name, fn })} />
       <PivotRowsSection pivotRows={pivotRows} stands={stands} run={run} busy={busy} reload={reloadMaster} askDelete={(name, fn) => setConfirm({ kind: "custom", name, fn })} />
 

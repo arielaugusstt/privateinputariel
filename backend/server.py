@@ -5,6 +5,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 import os
+import json
 import time
 import uuid
 import random
@@ -425,6 +426,66 @@ async def dummy_generate(user: dict = Depends(current_user)):
 async def dummy_clear(user: dict = Depends(current_user)):
     r = await db.daily_inputs.delete_many({"is_dummy": True})
     return {"deleted_days": r.deleted_count}
+
+
+IMPORT_NOV_FILE = ROOT_DIR / "data" / "import_nov_2026.json"
+IMPORT_NOV_RANGE = ("2026-11-03", "2026-11-21")
+
+
+def load_nov_data() -> dict:
+    return json.loads(IMPORT_NOV_FILE.read_text())
+
+
+@api.get("/import/nov-2026")
+async def import_nov_status(user: dict = Depends(current_user)):
+    data = load_nov_data()
+    meta = await db.meta.find_one({"key": "import_nov_2026"}, {"_id": 0})
+    existing = await db.daily_inputs.distinct("date", {"date": {"$in": data["dates"]}, "is_dummy": False})
+    return {"dates": data["dates"], "imported_at": meta["at"] if meta else None,
+            "existing_real_dates": sorted(existing)}
+
+
+@api.post("/import/nov-2026")
+async def import_nov_run(user: dict = Depends(current_user)):
+    data = load_nov_data()
+    stands = await db.stands.find({}, {"_id": 0}).to_list(500)
+    by_form = {s["form_name"]: s for s in stands}
+    items = await db.items.find({}, {"_id": 0}).to_list(100)
+    by_name = {i["name"]: i["id"] for i in items}
+    cup_ids = [by_name.get(n) for n in ("12oz", "22oz", "16oz")]
+    if not all(cup_ids):
+        raise HTTPException(409, "Item 12oz / 22oz / 16oz tidak ditemukan di Settings")
+    missing = sorted({f for day in data["sales"].values() for f in day} - set(by_form))
+    if missing:
+        raise HTTPException(409, f"Stand tidak ditemukan: {', '.join(missing)}")
+    lo, hi = IMPORT_NOV_RANGE
+    days, all_names = 0, []
+    for d in data["dates"]:
+        if not (lo <= d <= hi):
+            continue
+        entries = {}
+        for form, vals in data["sales"][d].items():
+            s = by_form[form]
+            names = [] if s["category"] == "AMKOPI" else list(dict.fromkeys(
+                norm_name(n) for n in data["spg"].get(d, {}).get(form, []) if n.strip()))[:3]
+            all_names += names
+            entries[s["id"]] = {"omset": vals[0], "qris": 0,
+                                "cups": {cid: v for cid, v in zip(cup_ids, vals[1:4])},
+                                "spg": (names + ["", "", ""])[:3]}
+        await db.daily_inputs.update_one(
+            {"date": d}, {"$set": {"entries": entries, "updated_at": now_iso(), "is_dummy": False}}, upsert=True)
+        days += 1
+    known = set(await db.spg_master.distinct("name"))
+    last = await db.spg_master.find_one({}, sort=[("sort_order", -1)])
+    order = last["sort_order"] if last else 0
+    added = []
+    for n in dict.fromkeys(all_names):
+        if n not in known:
+            order += 1
+            await db.spg_master.insert_one({"id": new_id(), "name": n, "sort_order": order, "is_active": True})
+            added.append(n)
+    await db.meta.update_one({"key": "import_nov_2026"}, {"$set": {"at": now_iso(), "days": days}}, upsert=True)
+    return {"imported_days": days, "new_spg": added}
 
 
 @api.get("/dummy/status")
